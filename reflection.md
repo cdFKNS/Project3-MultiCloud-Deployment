@@ -47,7 +47,35 @@ The single-tier deployment simplified network security but maintained strict IAM
 > ⚠️ **Note on Security Warnings:** Pending low-severity issues (default security group settings, missing advanced logging) remain. In production, these require immediate remediation.
 
 ---
+## Project Reflection: Nomdumiso's Azure Deployment Phase
 
+This reflection focuses on the configuration of the hybrid deployment environment in Azure, utilizing Terraform (IaC) and Azure Pipelines (CI/CD), which was my primary area of focus.
+
+### My Role: Azure Configuration and CI/CD Setup
+
+My responsibility was preparing the three critical configuration files for the Azure deployment to ensure the pipeline could successfully provision the infrastructure and deploy the application code.
+
+#### 1. Configuration Tasks Completed:
+
+| File | Change Made | Rationale |
+| :--- | :--- | :--- |
+| `rbac_deployer_role.json` | Replaced the placeholder with the **Azure Subscription ID**. | Granted the Azure DevOps Service Connection the minimum required permissions (via RBAC) to create resources in the subscription. |
+| `main.tf` (Terraform) | Inputted the IaC and set the **globally unique App Service Name**. | Defined the server infrastructure (App Service Plan and App Service) and ensured the name was unique across Azure. |
+| `azure-pipeline.yml` | Set the final unique names for the **App Service** and the **Terraform State Storage Account**. | Finalized the CI/CD pipeline variables, linking the deployment process to the unique infrastructure defined in `main.tf`. |
+
+#### 2. Key Challenges and Learning Points
+
+| Challenge Encountered | Resolution and Lesson Learned |
+| :--- | :--- |
+| **Git Command Misplacement** | Repeatedly attempted to type Git commands (like `git push`) inside the code files (`.json`, `.tf`). | **LESSON:** Git commands are for the **Terminal** (command line), not the code editor. The editor must contain only valid code syntax (like JSON or Terraform HCL). |
+| **Git Synchronization Error** | Encountered a rejected push (`error: failed to push some refs...`) because my local repository was behind the remote. | **LESSON:** When pushing fails due to "behind remote counterpart," the solution is always to **`git pull origin main`** first, and then push.  |
+| **Azure Quota Block** | The deployment was halted by Azure's system due to the **"Current Limit (Free VMs): 0"** error. | **MOST IMPORTANT LESSON:** Infrastructure as Code (IaC) is limited by administrative settings. The solution required submitting a manual support request to increase the Linux Free VM quota to 1.  |
+
+### Conclusion
+
+Successfully configuring the three files and understanding the unique requirements of the Azure platform (like naming constraints and managing service quotas) were the defining achievements of this phase. The experience reinforced the separation of concerns between code editing and command execution, which is fundamental to professional cloud development workflows.
+
+---
 ## 3. Multi-Cloud Insights and Consistency
 
 Deployment parity achieved through **code consistency**, despite architectural differences.
@@ -67,3 +95,4 @@ The final single-tier AWS deployment strategy successfully hosted the applicatio
 
 Alongside Azure App Service deployment, this validates MercuryAI’s **multi-cloud readiness**.  
 Key takeaway: strategic choices—like using a single source bundle—can simplify deployment, shifting focus from cross-origin issues to proper cloud platform configuration.
+
