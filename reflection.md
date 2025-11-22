@@ -1,66 +1,69 @@
-# Project 3 Reflection: Multi-Cloud App Deployment (AWS Lead)
+# Project 3 Reflection: Multi-Cloud App Deployment
 
-**Author:** KB (AWS Deployment Lead)  
-**Application:** MercuryAI (Containerized Node.js Backend & Static Frontend)
+**AWS Lead:** Kabelo Modimoeng (AWS Deployment Lead)  
+**Application:** MercuryAI (Node.js Backend & Static Frontend)
 
-The MercuryAI application has been successfully deployed and validated across both AWS and Azure environments, demonstrating architectural parity and functional consistency. This reflection documents the AWS deployment strategy, key security implementations, and critical multi-cloud insights gained, specifically addressing the technical challenges faced.
+The MercuryAI application has been successfully deployed and validated on AWS and Azure environments, demonstrating architectural parity and functional consistency. This reflection documents the finalized AWS deployment strategy, key security implementations, and critical multi-cloud insights gained, specifically addressing the technical challenges faced.
 
 ---
 
-## 1. AWS Deployment Strategy and Process
+## 1. AWS Deployment Strategy and Process (Revised)
 
-**Objective:** Deploy the containerized backend and static frontend using managed, scalable AWS services to meet enterprise standards for high availability and performance.
+**Final Approach:** Simplified, single-tier architecture where both frontend assets (`index.html`, `script.js`, `style.css`) and the Node.js backend (`server.js`) were bundled into a single ZIP file (Source Bundle) and deployed to Elastic Beanstalk (EB).
 
 ### Components & Services
 
-| Component       | AWS Services Used                | Rationale                                                                 |
-|-----------------|----------------------------------|---------------------------------------------------------------------------|
-| Backend API     | Elastic Beanstalk (EB) w/ Docker | EB abstracts infra (EC2, ALB, Auto Scaling) while leveraging Docker image. |
-| Frontend Assets | Amazon S3 + CloudFront CDN       | Durable storage + global CDN for HTTPS, low latency, and DDoS protection. |
-| Container Image | Amazon ECR                       | Secure, private registry integrated with CI/CD pipeline.                  |
+| Component          | AWS Service Used                  | Rationale                                                                 |
+|--------------------|-----------------------------------|---------------------------------------------------------------------------|
+| Entire Application | Elastic Beanstalk (Node.js)       | Consolidated hosting: EB runs Node.js server and serves static files via built-in web server (e.g., Nginx). |
+| Container Registry | N/A                               | Bypassed containerization (Docker/ECR) to reduce complexity.              |
+| CDN/Storage        | N/A                               | Frontend served directly from EB instance, no need for S3/CloudFront.     |
 
 ### Key Deployment Artifacts
-- **server/Dockerfile**: Defines Node.js API environment, dependencies, and container port (3001).  
-- **Dockerrun.aws.json**: Specifies ECR image, port mapping, and volume mounts for logging.
+- **ZIP Source Bundle**: Contains all application files (`index.html`, `server.js`, etc.) and `package.json`.  
+- **package.json**: Defines dependencies and start script for EB environment.
 
 ---
 
 ## 2. Security Implementations and Challenges
 
-Security followed the **Principle of Least Privilege (PoLP)**, with restrictive IAM roles and network controls.
+The single-tier deployment simplified network security but maintained strict IAM and secret management.
 
 ### A. IAM and Credential Management
 - **EC2 Instance Profile**  
   - Push runtime logs to CloudWatch  
   - Read `GEMINI_API_KEY` from AWS Secrets Manager (avoids hard-coded keys)  
 - **CI/CD Deployment Role**  
-  - Permissions limited to deployment tasks (e.g., `ecr:PushImage`, `s3:PutObject`, `elasticbeanstalk:UpdateEnvironment`)
+  - Limited to deployment-specific actions (upload ZIP to EB S3 bucket, trigger environment updates)
 
-### B. Network and CORS Configuration
-- **Backend Security**: EC2 instances in private subnet, accessible only via ALB.  
-- **Frontend Security**: CloudFront Origin Access Control (OAC) prevents direct S3 bucket access.  
-- **CORS Challenge**:  
-  - Modified `server.js` to read `PRODUCTION_CORS_ORIGINS` from environment variable.  
-  - Allowed CloudFront URL dynamically while maintaining security.
+### B. Network and Security Group Configuration
+- **CORS Simplification**:  
+  - Frontend and backend deployed on same EB instance → automatically satisfies same-origin policy.  
+  - Eliminated need for dynamic CORS configuration or CloudFront whitelisting.  
+- **Inbound Access**:  
+  - Load Balancer Security Group terminates HTTP/S traffic (ports 80/443).  
+  - Instances only accept traffic from Load Balancer on internal port.  
 
-> ⚠️ **Note on Security Warnings:** Low-severity issues (default security group settings, missing advanced logging) remain. In production, these require immediate remediation.
+> ⚠️ **Note on Security Warnings:** Pending low-severity issues (default security group settings, missing advanced logging) remain. In production, these require immediate remediation.
 
 ---
 
 ## 3. Multi-Cloud Insights and Consistency
 
-Consistency between AWS and Azure deployments relied on **containerization**.
+Deployment parity achieved through **code consistency**, despite architectural differences.
 
-| Comparison Point         | AWS (Elastic Beanstalk)                  | Azure (App Service/AKS)                  | Insight                                                                 |
-|---------------------------|------------------------------------------|------------------------------------------|-------------------------------------------------------------------------|
-| Compute Abstraction       | High Control (Managed EC2/ALB)           | Higher Abstraction (Managed Service)      | AWS offers deeper visibility; Azure provides faster deployment path.    |
-| Identity Management       | IAM (Resource-centric, fine-grained)     | Azure AD (User/Group-centric)             | Azure AD is unified for Microsoft users; IAM excels at fine-grained PoLP. |
-| Consistency Challenge     | Env Variable Management                  | Configuration Drift                       | Risk in frontend API URL substitution; each cloud needs specific env vars. |
-| Power of Parity           | Docker, Node.js                          | Docker, Node.js                          | Core app unchanged; only deployment artifacts differ.                   |
+| Comparison Point     | AWS (Elastic Beanstalk Single-Tier) | Azure (App Service)                  | Insight                                                                 |
+|----------------------|--------------------------------------|--------------------------------------|-------------------------------------------------------------------------|
+| Deployment Model     | Single Source Bundle (Node.js)       | Single App Service Unit               | Both used single-environment deployment, proving monolithic hosting works. |
+| Service Consistency  | EB web server config for static files | App Service requires startup commands | Challenge shifted from CORS to internal file serving configuration.     |
+| Consistency Strategy | Core app logic unchanged             | Core app logic unchanged              | Portable Node.js code → infra setup differs, app remains cloud-agnostic. |
+| Multi-Cloud Risk     | Dependency on EB’s native features   | Requires custom config for parity     | Mild vendor lock-in risk due to AWS-specific behavior.                  |
 
 ---
 
 ## 4. Conclusion
 
-This project successfully demonstrated **multi-cloud readiness**.  
-By leveraging **standardized container technology** and a disciplined IAM approach, MercuryAI can be reliably deployed and operated across different cloud providers.
+The final single-tier AWS deployment strategy successfully hosted the application, offering **simpler setup** and **same-origin communication benefits** compared to a decoupled S3/CloudFront approach.  
+
+Alongside Azure App Service deployment, this validates MercuryAI’s **multi-cloud readiness**.  
+Key takeaway: strategic choices—like using a single source bundle—can simplify deployment, shifting focus from cross-origin issues to proper cloud platform configuration.
